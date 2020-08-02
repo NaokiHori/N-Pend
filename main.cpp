@@ -1,3 +1,5 @@
+#include "/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/xlocale.h"
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
