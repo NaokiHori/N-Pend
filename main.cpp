@@ -49,7 +49,7 @@ visual_t *init_visual(const int N, const int window_left, const int window_up, c
   visual->lines=(XSegment*)malloc(sizeof(XSegment)*N);
   visual->arcs=(XArc*)malloc(sizeof(XArc)*N);
   visual->pend_ox = window_width/2;
-  visual->pend_oy = window_height/4;
+  visual->pend_oy = window_height/2;
   return visual;
 }
 
@@ -57,7 +57,7 @@ int update_visual(visual_t *visual, Pendulum pendulum){
   const int N = pendulum.get_N();
   const std::vector<double> thetas=pendulum.get_theta0s();
   const std::vector<double> ls=pendulum.get_ls();
-  unsigned int lbox = 50;
+  unsigned int lbox = 75;
   XArc *arcs=visual->arcs;
   XSegment *lines=visual->lines;
   for(int n=0; n<N; n++){
@@ -105,6 +105,7 @@ int destruct_visual(visual_t *visual){
 
 int main(){
   const int N = 2;
+  const double g = 1.;
   const double dt = 0.01;
   const int stepmax = 10000;
   const int window_left   = 200;
@@ -112,7 +113,7 @@ int main(){
   const int window_width  = 800;
   const int window_height = 800;
   visual_t *visual = init_visual(N, window_left, window_up, window_width, window_height);
-  Pendulum pendulum(N);
+  Pendulum pendulum(N, g);
   for(int step=0; step<stepmax; step++){
     pendulum.update(dt);
     if(step%10==0){

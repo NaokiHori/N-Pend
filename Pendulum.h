@@ -5,7 +5,7 @@
 
 class Pendulum {
   public:
-    Pendulum(const int);
+    Pendulum(const int, const double);
     ~Pendulum();
     const int get_N();
     const std::vector<double> get_theta0s();

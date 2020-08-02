@@ -4,21 +4,23 @@
 #include "Pendulum.h"
 
 
-Pendulum::Pendulum(const int N_){
-  N = N_;
-  g = 1.;
-  theta0s     = std::vector<double>(N, 0.);
-  theta1s     = std::vector<double>(N, 0.);
-  theta2s     = std::vector<double>(N, 0.);
-  theta0s_old = std::vector<double>(N, 0.);
-  theta1s_old = std::vector<double>(N, 0.);
-  ms          = std::vector<double>(N, 0.);
-  ls          = std::vector<double>(N, 0.);
+static int inverse(std::vector<double> &invA, std::vector<double> A, const int N);
+
+Pendulum::Pendulum(const int N, const double g){
+  this->N = N;
+  this->g = g;
+  theta0s     = std::vector<double>(N,   0.);
+  theta1s     = std::vector<double>(N,   0.);
+  theta2s     = std::vector<double>(N,   0.);
+  theta0s_old = std::vector<double>(N,   0.);
+  theta1s_old = std::vector<double>(N,   0.);
+  ms          = std::vector<double>(N,   0.);
+  ls          = std::vector<double>(N,   0.);
   A           = std::vector<double>(N*N, 0.);
   B           = std::vector<double>(N*N, 0.);
   invA        = std::vector<double>(N*N, 0.);
   for(int n=0; n<N; n++){
-    theta0s[n] = M_PI*0.5+0.01*(-0.5+rand()/RAND_MAX);
+    theta0s[n] = M_PI*1.0+1.e-4*(-0.5+rand()/RAND_MAX);
     ms[n] = 1.;
     ls[n] = 1.;
   }
@@ -39,36 +41,9 @@ const std::vector<double> Pendulum::get_ls(){
   return ls;
 }
 
-static int inverse(std::vector<double> &inv_a, std::vector<double> a, const int n){
-  double buf;
-  int i, j, k;
-  for(i=0;i<n;i++){
-    for(j=0;j<n;j++){
-      inv_a[i*n+j]=(i==j)?1.0:0.0;
-    }
-  }
-  for(i=0;i<n;i++){
-    buf=1/a[i*n+i];
-    for(j=0;j<n;j++){
-      a[i*n+j]*=buf;
-      inv_a[i*n+j]*=buf;
-    }
-    for(j=0;j<n;j++){
-      if(i!=j){
-        buf=a[j*n+i];
-        for(k=0;k<n;k++){
-          a[j*n+k]-=a[i*n+k]*buf;
-          inv_a[j*n+k]-=inv_a[i*n+k]*buf;
-        }
-      }
-    }
-  }
-  return 0;
-}
-
 int Pendulum::update(const double dt){
-  double residual=0.;
-  const double residual_max=1.e-14;
+  double residual;
+  const double residual_max=1.e-15;
   for(int i=0; i<N; i++){
     theta0s_old[i]=theta0s[i];
     theta1s_old[i]=theta1s[i];
@@ -130,7 +105,7 @@ int Pendulum::update(const double dt){
       theta0s[i]=theta0s_old[i]+0.5*(theta1s[i]+theta1s_old[i])*dt;
     }
     std::clog << "residual " << std::scientific << residual << std::endl;
-  }while(residual>residual_max);
+  }while(residual>residual_max*N);
   return 0;
 }
 
@@ -152,6 +127,36 @@ int Pendulum::check_energy(){
     ke += 0.5*ms[n]*(pow(xdot, 2.)+pow(ydot, 2.));
   }
   std::cout << "ke: " << ke <<  " pe: " << pe << " te: " << ke+pe << std::endl;
+  return 0;
+}
+
+static int inverse(std::vector<double> &invA, std::vector<double> A, const int N){
+  double buf;
+  for(int i=0; i<N; i++){
+    for(int j=0; j<N; j++){
+      if(i == j){
+        invA[i*N+j] = 1.;
+      }else{
+        invA[i*N+j] = 0.;
+      }
+    }
+  }
+  for(int i=0; i<N; i++){
+    buf = 1./A[i*N+i];
+    for(int j=0; j<N; j++){
+      A[i*N+j]    *= buf;
+      invA[i*N+j] *= buf;
+    }
+    for(int j=0;j<N;j++){
+      if(i!=j){
+        buf=A[j*N+i];
+        for(int k=0;k<N;k++){
+          A[j*N+k]-=A[i*N+k]*buf;
+          invA[j*N+k]-=invA[i*N+k]*buf;
+        }
+      }
+    }
+  }
   return 0;
 }
 
