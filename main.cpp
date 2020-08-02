@@ -10,11 +10,18 @@
 
 typedef struct {
   int N;
+  double g;
   double *theta0s;
   double *theta1s;
   double *theta2s;
   double *ms;
   double *ls;
+  /* temporary */
+  double *A;
+  double *B;
+  double *invA;
+  double *theta0s_old;
+  double *theta1s_old;
 } pendulum_t;
 
 typedef struct {
@@ -60,34 +67,40 @@ int inverse(double *inv_a, double *a, const int n){
 static pendulum_t *init_pendulum(const int N){
   pendulum_t *pendulum=(pendulum_t*)malloc(sizeof(pendulum_t));
   pendulum->N = N;
+  pendulum->g = 1.;
   pendulum->theta0s = (double*)malloc(sizeof(double)*N);
   pendulum->theta1s = (double*)malloc(sizeof(double)*N);
   pendulum->theta2s = (double*)malloc(sizeof(double)*N);
   pendulum->ms      = (double*)malloc(sizeof(double)*N);
   pendulum->ls      = (double*)malloc(sizeof(double)*N);
+  pendulum->A       = (double*)malloc(N*N*sizeof(double));
+  pendulum->B       = (double*)malloc(N*N*sizeof(double));
+  pendulum->invA        = (double*)malloc(N*N*sizeof(double));
+  pendulum->theta0s_old = (double*)malloc(N*sizeof(double));
+  pendulum->theta1s_old = (double*)malloc(N*sizeof(double));
   for(int n=0; n<N; n++){
     pendulum->theta0s[n]=M_PI*0.5+0.01*(-0.5+rand()/RAND_MAX);
     pendulum->theta1s[n]=0.;
     pendulum->theta2s[n]=0.;
-    pendulum->ms[n]=1.;
-    pendulum->ls[n]=1.;
+    pendulum->ms[n]=.75*(n+1);
+    pendulum->ls[n]=.75*(n+1);
   }
   return pendulum;
 }
 
 static int update_pendulum(const double dt, pendulum_t *pendulum){
   const int N = pendulum->N;
-  const double g=1.;
+  const double g = pendulum->g;
   double *theta0s=pendulum->theta0s;
   double *theta1s=pendulum->theta1s;
   double *theta2s=pendulum->theta2s;
   const double *ms=pendulum->ms;
   const double *ls=pendulum->ls;
-  double *A=(double*)malloc(N*N*sizeof(double));
-  double *B=(double*)malloc(N*N*sizeof(double));
-  double *invA=(double*)malloc(N*N*sizeof(double));
-  double *theta0s_old=(double*)malloc(N*sizeof(double));
-  double *theta1s_old=(double*)malloc(N*sizeof(double));
+  double *A=pendulum->A;
+  double *B=pendulum->B;
+  double *invA=pendulum->invA;
+  double *theta0s_old=pendulum->theta0s_old;
+  double *theta1s_old=pendulum->theta1s_old;
   double residual=0.;
   const double residual_max=1.e-14;
   for(int i=0; i<N; i++){
@@ -95,11 +108,11 @@ static int update_pendulum(const double dt, pendulum_t *pendulum){
     theta1s_old[i]=theta1s[i];
   }
   do{
-    for(int j=0; j<N; j++){
-      for(int i=0; i<N; i++){
-        A[j*N+i]=0.;
-        B[j*N+i]=0.;
-        invA[j*N+i]=0.;
+    for(int i=0; i<N; i++){
+      for(int j=0; j<N; j++){
+        A[i*N+j]=0.;
+        B[i*N+j]=0.;
+        invA[i*N+j]=0.;
       }
     }
     for(int i=0; i<N; i++){
@@ -126,9 +139,9 @@ static int update_pendulum(const double dt, pendulum_t *pendulum){
       }
     }
     inverse(invA, A, N);
-    for(int j=0; j<N; j++){
-      for(int i=0; i<N; i++){
-        A[j*N+i]=0.;
+    for(int i=0; i<N; i++){
+      for(int j=0; j<N; j++){
+        A[i*N+j]=0.;
       }
     }
     for(int j=0; j<N; j++){
@@ -146,29 +159,40 @@ static int update_pendulum(const double dt, pendulum_t *pendulum){
     }
     residual=0.;
     for(int i=0; i<N; i++){
+      residual+=fabs(theta1s[i]-(theta1s_old[i]+theta2s[i]*dt));
       theta1s[i]=theta1s_old[i]+theta2s[i]*dt;
-      residual+=fabs(theta0s[i]-(theta0s_old[i]+0.5*(theta1s[i]+theta1s_old[i])*dt));
       theta0s[i]=theta0s_old[i]+0.5*(theta1s[i]+theta1s_old[i])*dt;
     }
   }while(residual>residual_max);
-  free(A);
-  free(B);
-  free(theta0s_old);
-  free(theta1s_old);
   return 0;
 }
 
-/* static int check_energy(pendulum_t *pendulum){ */
-/*   const int N = pendulum->N; */
-/*   const double *theta0s=pendulum->theta0s; */
-/*   const double *theta1s=pendulum->theta1s; */
-/*   double ke = 0.; */
-/*   double pe = 0.; */
-/*   for(int n=0; n<N; n++){ */
-/*     y=theta0s[n] */
-/*   } */
-/*   return 0; */
-/* } */
+static int check_energy(pendulum_t *pendulum){
+  const int N = pendulum->N;
+  const double g = pendulum->g;
+  const double *theta0s=pendulum->theta0s;
+  const double *theta1s=pendulum->theta1s;
+  const double *ls=pendulum->ls;
+  const double *ms=pendulum->ms;
+  double ke = 0.;
+  double pe = 0.;
+  double xdot, ydot;
+  double y;
+  for(int n=0; n<N; n++){
+    y = 0.;
+    xdot = 0.;
+    ydot = 0.;
+    for(int nn=0; nn<=n; nn++){
+      y -= ls[nn]*cos(theta0s[nn]);
+      xdot += ls[nn]*theta1s[nn]*cos(theta0s[nn]);
+      ydot += ls[nn]*theta1s[nn]*sin(theta0s[nn]);
+    }
+    pe += ms[n]*g*y;
+    ke += 0.5*ms[n]*(pow(xdot, 2.)+pow(ydot, 2.));
+  }
+  printf("ke: %.7f pe: %.7f te: %.7f\n", ke, pe, ke+pe);
+  return 0;
+}
 
 static int destruct_pendulum(pendulum_t *pendulum){
   free(pendulum->theta0s);
@@ -176,6 +200,10 @@ static int destruct_pendulum(pendulum_t *pendulum){
   free(pendulum->theta2s);
   free(pendulum->ms);
   free(pendulum->ls);
+  free(pendulum->A);
+  free(pendulum->B);
+  free(pendulum->theta0s_old);
+  free(pendulum->theta1s_old);
   free(pendulum);
   return 0;
 }
@@ -189,8 +217,13 @@ visual_t *init_visual(const int N, const int window_left, const int window_up, c
   }
   visual->screen = DefaultScreen(visual->display);
   visual->window = XCreateSimpleWindow(
-      visual->display, RootWindow(visual->display, visual->screen),
-      window_left, window_up, window_width, window_height, 1,
+      visual->display,
+      RootWindow(visual->display, visual->screen),
+      window_left,
+      window_up,
+      window_width,
+      window_height,
+      1,
       BlackPixel(visual->display, visual->screen),
       WhitePixel(visual->display, visual->screen)
   );
@@ -210,17 +243,17 @@ visual_t *init_visual(const int N, const int window_left, const int window_up, c
 int update_visual(visual_t *visual, pendulum_t *pendulum){
   const int N = pendulum->N;
   const double *thetas=pendulum->theta0s;
+  const double *ls=pendulum->ls;
   unsigned int lbox = 50;
   XArc *arcs=visual->arcs;
   XSegment *lines=visual->lines;
-  XClearWindow(visual->display, visual->window);
   for(int n=0; n<N; n++){
     if(n==0){
-      arcs[0].x = visual->pend_ox+lbox*2*sin(thetas[0])-lbox/2;
-      arcs[0].y = visual->pend_oy+lbox*2*cos(thetas[0])-lbox/2;
+      arcs[n].x = visual->pend_ox+lbox*2*ls[n]*sin(thetas[n])-lbox/2;
+      arcs[n].y = visual->pend_oy+lbox*2*ls[n]*cos(thetas[n])-lbox/2;
     }else{
-      arcs[n].x = arcs[n-1].x+lbox*2*sin(thetas[n]);
-      arcs[n].y = arcs[n-1].y+lbox*2*cos(thetas[n]);
+      arcs[n].x = arcs[n-1].x+lbox*2*ls[n]*sin(thetas[n]);
+      arcs[n].y = arcs[n-1].y+lbox*2*ls[n]*cos(thetas[n]);
     }
     arcs[n].width = lbox;
     arcs[n].height = lbox;
@@ -235,9 +268,10 @@ int update_visual(visual_t *visual, pendulum_t *pendulum){
       lines[n].x1 = arcs[n-1].x+lbox/2;
       lines[n].y1 = arcs[n-1].y+lbox/2;
     }
-    lines[n].x2 = arcs[n  ].x+lbox/2;
-    lines[n].y2 = arcs[n  ].y+lbox/2;
+    lines[n].x2 = arcs[n].x+lbox/2;
+    lines[n].y2 = arcs[n].y+lbox/2;
   }
+  XClearWindow(visual->display, visual->window);
   XSetForeground(visual->display, visual->gc, visual->black.pixel);
   XDrawSegments(visual->display, visual->window, visual->gc, visual->lines, N);
   XFlush(visual->display);
@@ -258,26 +292,21 @@ int destruct_visual(visual_t *visual){
 
 int main(void){
   const int N = 3;
-  const double dt=0.01;
+  const double dt = 0.01;
+  const int stepmax = 10000;
   const int window_left   = 200;
   const int window_up     = 200;
   const int window_width  = 800;
   const int window_height = 800;
   visual_t *visual = init_visual(N, window_left, window_up, window_width, window_height);
   pendulum_t *pendulum = init_pendulum(N);
-  int iter=0;
-  while(true){
+  for(int step=0; step<stepmax; step++){
     update_pendulum(dt, pendulum);
-    /* check_energy(pendulum); */
-    if(iter%10==0){
+    if(step%10==0){
       update_visual(visual, pendulum);
+      check_energy(pendulum);
       usleep(3.333e4);
     }
-    if(iter>10000){
-      break;
-    }
-    printf("%d\n", iter);
-    iter++;
   }
   return 0;
 }
