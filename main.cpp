@@ -53,10 +53,10 @@ visual_t *init_visual(const int N, const int window_left, const int window_up, c
   return visual;
 }
 
-int update_visual(visual_t *visual, pendulum_t *pendulum){
-  const int N = pendulum->N;
-  const double *thetas=pendulum->theta0s;
-  const double *ls=pendulum->ls;
+int update_visual(visual_t *visual, Pendulum pendulum){
+  const int N = pendulum.get_N();
+  const std::vector<double> thetas=pendulum.get_theta0s();
+  const std::vector<double> ls=pendulum.get_ls();
   unsigned int lbox = 50;
   XArc *arcs=visual->arcs;
   XSegment *lines=visual->lines;
@@ -103,8 +103,8 @@ int destruct_visual(visual_t *visual){
   return 0;
 }
 
-int main(void){
-  const int N = 3;
+int main(){
+  const int N = 2;
   const double dt = 0.01;
   const int stepmax = 10000;
   const int window_left   = 200;
@@ -112,12 +112,12 @@ int main(void){
   const int window_width  = 800;
   const int window_height = 800;
   visual_t *visual = init_visual(N, window_left, window_up, window_width, window_height);
-  pendulum_t *pendulum = init_pendulum(N);
+  Pendulum pendulum(N);
   for(int step=0; step<stepmax; step++){
-    update_pendulum(dt, pendulum);
+    pendulum.update(dt);
     if(step%10==0){
       update_visual(visual, pendulum);
-      check_energy(pendulum);
+      pendulum.check_energy();
       std::this_thread::sleep_for(std::chrono::milliseconds(33));
     }
   }

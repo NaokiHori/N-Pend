@@ -1,25 +1,31 @@
 #if !defined(PENDULUM_H)
 #define PENDULUM_H
 
-typedef struct {
-  int N;
-  double g;
-  double *theta0s;
-  double *theta1s;
-  double *theta2s;
-  double *ms;
-  double *ls;
-  /* temporary */
-  double *A;
-  double *B;
-  double *invA;
-  double *theta0s_old;
-  double *theta1s_old;
-} pendulum_t;
+#include <vector>
 
-extern pendulum_t *init_pendulum(const int N);
-extern int update_pendulum(const double dt, pendulum_t *pendulum);
-extern int check_energy(pendulum_t *pendulum);
-extern int destruct_pendulum(pendulum_t *pendulum);
+class Pendulum {
+  public:
+    Pendulum(const int);
+    ~Pendulum();
+    const int get_N();
+    const std::vector<double> get_theta0s();
+    const std::vector<double> get_ls();
+    int update(const double);
+    int check_energy(void);
+  private:
+    int N;
+    double g;
+    std::vector<double> theta0s;
+    std::vector<double> theta1s;
+    std::vector<double> theta2s;
+    std::vector<double> ms;
+    std::vector<double> ls;
+    /* temporary */
+    std::vector<double> theta0s_old;
+    std::vector<double> theta1s_old;
+    std::vector<double> A;
+    std::vector<double> B;
+    std::vector<double> invA;
+};
 
 #endif // PENDULUM_H

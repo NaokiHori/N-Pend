@@ -1,11 +1,45 @@
 #include "/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/xlocale.h"
 #include <iostream>
-#include <stdlib.h>
 #include <cmath>
 #include "Pendulum.h"
 
 
-static int inverse(double *inv_a, double *a, const int n){
+Pendulum::Pendulum(const int N_){
+  N = N_;
+  g = 1.;
+  theta0s     = std::vector<double>(N, 0.);
+  theta1s     = std::vector<double>(N, 0.);
+  theta2s     = std::vector<double>(N, 0.);
+  theta0s_old = std::vector<double>(N, 0.);
+  theta1s_old = std::vector<double>(N, 0.);
+  ms          = std::vector<double>(N, 0.);
+  ls          = std::vector<double>(N, 0.);
+  A           = std::vector<double>(N*N, 0.);
+  B           = std::vector<double>(N*N, 0.);
+  invA        = std::vector<double>(N*N, 0.);
+  for(int n=0; n<N; n++){
+    theta0s[n] = M_PI*0.5+0.01*(-0.5+rand()/RAND_MAX);
+    ms[n] = 1.;
+    ls[n] = 1.;
+  }
+}
+
+Pendulum::~Pendulum(){
+}
+
+const int Pendulum::get_N(){
+  return N;
+}
+
+const std::vector<double> Pendulum::get_theta0s(){
+  return theta0s;
+}
+
+const std::vector<double> Pendulum::get_ls(){
+  return ls;
+}
+
+static int inverse(std::vector<double> &inv_a, std::vector<double> a, const int n){
   double buf;
   int i, j, k;
   for(i=0;i<n;i++){
@@ -32,43 +66,7 @@ static int inverse(double *inv_a, double *a, const int n){
   return 0;
 }
 
-pendulum_t *init_pendulum(const int N){
-  pendulum_t *pendulum=(pendulum_t*)malloc(sizeof(pendulum_t));
-  pendulum->N = N;
-  pendulum->g = 1.;
-  pendulum->theta0s = (double*)malloc(sizeof(double)*N);
-  pendulum->theta1s = (double*)malloc(sizeof(double)*N);
-  pendulum->theta2s = (double*)malloc(sizeof(double)*N);
-  pendulum->ms      = (double*)malloc(sizeof(double)*N);
-  pendulum->ls      = (double*)malloc(sizeof(double)*N);
-  pendulum->A       = (double*)malloc(N*N*sizeof(double));
-  pendulum->B       = (double*)malloc(N*N*sizeof(double));
-  pendulum->invA        = (double*)malloc(N*N*sizeof(double));
-  pendulum->theta0s_old = (double*)malloc(N*sizeof(double));
-  pendulum->theta1s_old = (double*)malloc(N*sizeof(double));
-  for(int n=0; n<N; n++){
-    pendulum->theta0s[n]=M_PI*0.5+0.01*(-0.5+rand()/RAND_MAX);
-    pendulum->theta1s[n]=0.;
-    pendulum->theta2s[n]=0.;
-    pendulum->ms[n]=.75*(n+1);
-    pendulum->ls[n]=.75*(n+1);
-  }
-  return pendulum;
-}
-
-int update_pendulum(const double dt, pendulum_t *pendulum){
-  const int N = pendulum->N;
-  const double g = pendulum->g;
-  double *theta0s=pendulum->theta0s;
-  double *theta1s=pendulum->theta1s;
-  double *theta2s=pendulum->theta2s;
-  const double *ms=pendulum->ms;
-  const double *ls=pendulum->ls;
-  double *A=pendulum->A;
-  double *B=pendulum->B;
-  double *invA=pendulum->invA;
-  double *theta0s_old=pendulum->theta0s_old;
-  double *theta1s_old=pendulum->theta1s_old;
+int Pendulum::update(const double dt){
   double residual=0.;
   const double residual_max=1.e-14;
   for(int i=0; i<N; i++){
@@ -131,17 +129,12 @@ int update_pendulum(const double dt, pendulum_t *pendulum){
       theta1s[i]=theta1s_old[i]+theta2s[i]*dt;
       theta0s[i]=theta0s_old[i]+0.5*(theta1s[i]+theta1s_old[i])*dt;
     }
+    std::clog << "residual " << std::scientific << residual << std::endl;
   }while(residual>residual_max);
   return 0;
 }
 
-int check_energy(pendulum_t *pendulum){
-  const int N = pendulum->N;
-  const double g = pendulum->g;
-  const double *theta0s=pendulum->theta0s;
-  const double *theta1s=pendulum->theta1s;
-  const double *ls=pendulum->ls;
-  const double *ms=pendulum->ms;
+int Pendulum::check_energy(){
   double ke = 0.;
   double pe = 0.;
   double xdot, ydot;
@@ -158,21 +151,7 @@ int check_energy(pendulum_t *pendulum){
     pe += ms[n]*g*y;
     ke += 0.5*ms[n]*(pow(xdot, 2.)+pow(ydot, 2.));
   }
-  std::cout << "ke: " << ke <<  "pe: " << pe << "te: " << ke+pe << std::endl;
-  return 0;
-}
-
-int destruct_pendulum(pendulum_t *pendulum){
-  free(pendulum->theta0s);
-  free(pendulum->theta1s);
-  free(pendulum->theta2s);
-  free(pendulum->ms);
-  free(pendulum->ls);
-  free(pendulum->A);
-  free(pendulum->B);
-  free(pendulum->theta0s_old);
-  free(pendulum->theta1s_old);
-  free(pendulum);
+  std::cout << "ke: " << ke <<  " pe: " << pe << " te: " << ke+pe << std::endl;
   return 0;
 }
 
