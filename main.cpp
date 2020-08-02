@@ -1,10 +1,9 @@
 #include "/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/xlocale.h"
 #include <iostream>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <math.h>
+#include <chrono>
+#include <thread>
+#include <cmath>
 #include <X11/Xlib.h>
 #include "Pendulum.h"
 
@@ -26,7 +25,7 @@ visual_t *init_visual(const int N, const int window_left, const int window_up, c
   visual_t *visual=(visual_t*)malloc(sizeof(visual_t));
   visual->display = XOpenDisplay(NULL);
   if(visual->display == NULL){
-    fprintf(stderr, "XOpenDisplay returns NULL\n");
+    std::cerr <<  "XOpenDisplay returns NULL" << std::endl;
     exit(EXIT_FAILURE);
   }
   visual->screen = DefaultScreen(visual->display);
@@ -119,7 +118,7 @@ int main(void){
     if(step%10==0){
       update_visual(visual, pendulum);
       check_energy(pendulum);
-      usleep(3.333e4);
+      std::this_thread::sleep_for(std::chrono::milliseconds(33));
     }
   }
   return 0;
