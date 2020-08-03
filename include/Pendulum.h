@@ -15,11 +15,11 @@ class Pendulum {
     const std::vector<double> get_thetas();
     const std::vector<double> get_lengths();
     // others
-    int update(const double dt);
-    int check_energy();
+    void update(const double dt);
+    void check_energy(const int step, const double time, const std::string energy_fname);
   private:
     // set initial condition from file
-    int read_file(const std::string input_fname);
+    void read_file(const std::string input_fname);
     // number of mass
     int N;
     // gravitational acceleration
