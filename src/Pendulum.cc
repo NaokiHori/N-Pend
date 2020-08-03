@@ -80,7 +80,7 @@ void Pendulum::update(const double dt){
    * NOTE: for stability purpose, Crank-Nicolson implicit scheme is adopted
    */
   double residual;
-  const double residual_max=1.e-15;
+  const double residual_max = 1.e-15;
   // store previous values in *_old
   for(int n=0; n<N; n++){
     thetas_old[n] = thetas[n];
@@ -91,9 +91,9 @@ void Pendulum::update(const double dt){
     // initialize working space
     for(int i=0; i<N; i++){
       for(int j=0; j<N; j++){
-        A[i*N+j]=0.;
-        B[i*N+j]=0.;
-        invA[i*N+j]=0.;
+        A[i*N+j] = 0.;
+        B[i*N+j] = 0.;
+        invA[i*N+j] = 0.;
       }
     }
     // set A, see reference
