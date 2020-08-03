@@ -1,32 +1,60 @@
 #include "/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/xlocale.h"
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include "Pendulum.h"
 
 
 static int inverse(std::vector<double> &invA, std::vector<double> A, const int N);
 
-Pendulum::Pendulum(const int N, const double g){
-  this->N = N;
+Pendulum::Pendulum(const std::string input_fname, const double g){
+  /*
+   * constructor
+   */
+  read_file(input_fname); // N is set inside this function
   this->g = g;
-  thetas     = std::vector<double>(N,   0.);
-  omegas     = std::vector<double>(N,   0.);
-  alphas     = std::vector<double>(N,   0.);
+  // allocate memory of working vars
   thetas_old = std::vector<double>(N,   0.);
   omegas_old = std::vector<double>(N,   0.);
-  masses     = std::vector<double>(N,   0.);
-  lengths    = std::vector<double>(N,   0.);
   A          = std::vector<double>(N*N, 0.);
   B          = std::vector<double>(N*N, 0.);
   invA       = std::vector<double>(N*N, 0.);
-  for(int n=0; n<N; n++){
-    thetas[n]  = M_PI+1.e-4*(-0.5+rand()/RAND_MAX);
-    masses[n]  = 1.;
-    lengths[n] = 1.;
-  }
+  std::cout << "pendulum initialization finished" << std::endl;
 }
 
 Pendulum::~Pendulum(){
+  /*
+   * destructor, for now nothing to do
+   */
+}
+
+int Pendulum::read_file(const std::string input_fname){
+  /*
+   * set initial conditions of pendulum
+   */
+  std::ifstream fp(input_fname);
+  // temporary variables to store info from file
+  double mass, length, theta, omega, alpha;
+  std::string sbuf;
+  // open file
+  if(!fp.is_open()){
+    std::cerr << "file open error: " << input_fname << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  // skip header
+  fp >> sbuf >> sbuf >> sbuf >> sbuf >> sbuf;
+  this->N = 0;
+  while(fp >> mass >> length >> theta >> omega >> alpha){
+    masses.push_back(mass);
+    lengths.push_back(length);
+    thetas.push_back(theta);
+    omegas.push_back(omega);
+    alphas.push_back(alpha);
+    this->N++;
+  }
+  std::cout << "Load initial condition finished" << std::endl;
+  std::cout << "Totally " << this->N << " masses are read" << std::endl;
+  return 0;
 }
 
 const int Pendulum::get_N(){

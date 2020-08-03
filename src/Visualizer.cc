@@ -32,7 +32,7 @@ Visualizer::Visualizer(const int N, const std::array<int, 4> window_position){
   lines=(XSegment*)malloc(sizeof(XSegment)*N);
   arcs=(XArc*)malloc(sizeof(XArc)*N);
   pend_ox = window_position[2]/2;
-  pend_oy = window_position[3]/2;
+  pend_oy = window_position[3]/8;
 }
 
 int Visualizer::update(Pendulum pendulum, const double time){

@@ -2,35 +2,38 @@
 #define PENDULUM_H
 
 #include <vector>
+#include <string>
 
 class Pendulum {
   public:
     // constructor
-    Pendulum(const int, const double);
+    Pendulum(const std::string input_file, const double g);
     // destructor
     ~Pendulum();
-    // getter
+    // getters
     const int get_N();
     const std::vector<double> get_thetas();
     const std::vector<double> get_lengths();
     // others
-    int update(const double);
-    int check_energy(void);
+    int update(const double dt);
+    int check_energy();
   private:
+    // set initial condition from file
+    int read_file(const std::string input_fname);
     // number of mass
     int N;
     // gravitational acceleration
     double g;
+    // mass
+    std::vector<double> masses;
+    // length
+    std::vector<double> lengths;
     // angular position
     std::vector<double> thetas;
     // angular velocity
     std::vector<double> omegas;
     // angular acceleration
     std::vector<double> alphas;
-    // mass
-    std::vector<double> masses;
-    // length
-    std::vector<double> lengths;
     // previous step angular position/velocity
     std::vector<double> thetas_old;
     std::vector<double> omegas_old;
