@@ -7,10 +7,10 @@
 class Visualizer {
   public:
     // constructor
-    Visualizer(const int, const std::array<int, 4> window_position, const std::array<unsigned int, 2> pendulum_origin);
+    Visualizer(const std::vector<class Pendulum> pendulums, const std::array<int, 4> window_position, const std::array<unsigned int, 2> pendulum_origin, std::vector<const std::string> colors);
     // destructor
     ~Visualizer();
-    void update(class Pendulum pendulum, const double dt);
+    void update(std::vector<class Pendulum> pendulums, const double dt);
   private:
     // window size
     int width;
@@ -25,7 +25,8 @@ class Visualizer {
     // objects to be drawn
     XArc *arcs;
     XSegment *lines;
-    XColor red, black, dummy;
+    XColor black, dummy;
+    XColor *mcolors;
 };
 
 #endif // VISUALIZER_H
